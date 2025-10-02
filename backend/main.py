@@ -1,3 +1,16 @@
+import ctypes
+def hide_console():
+    """Hides the console window."""
+    try:
+        # Get the handle to the console window
+        hwnd = ctypes.windll.kernel32.GetConsoleWindow()
+        if hwnd != 0:
+            # Hide the window (SW_HIDE is 0)
+            ctypes.windll.user32.ShowWindow(hwnd, 0)
+    except Exception as e:
+        # Handle potential errors gracefully
+        print(f"Failed to hide console: {e}")
+
 import os
 import sys
 import threading
@@ -147,4 +160,5 @@ def start_app():
     sys.exit(app_qt.exec_())
 
 if __name__ == "__main__":
+    hide_console()
     start_app()

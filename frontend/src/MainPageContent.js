@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 
 const API_URL = 'http://127.0.0.1:8000';
 
-// Accept isImageCachingEnabled as a prop
 export default function MainPageContent({ isImageCachingEnabled }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -18,10 +17,22 @@ export default function MainPageContent({ isImageCachingEnabled }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [knownFiles, setKnownFiles] = useState([]);
+  const [showSaveInput, setShowSaveInput] = useState(false);
+  const [newKnownFaceName, setNewKnownFaceName] = useState("");
 
   const startCamera = useCallback(async (facingMode = useFrontCamera ? "user" : "environment") => {
     try {
       setError("");
+      setCapturedBlob(null);
+      setPreviewUrl((prevUrl) => {
+        if (prevUrl) URL.revokeObjectURL(prevUrl);
+        return null;
+      });
+      setResult(null);
+      setShowSaveInput(false);
+      setNewKnownFaceName("");
+      if (unknownInputRef.current) unknownInputRef.current.value = "";
+      
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
         streamRef.current = null;
@@ -47,17 +58,22 @@ export default function MainPageContent({ isImageCachingEnabled }) {
   }, [useFrontCamera]);
 
   const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    setIsStreaming(false);
+
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);
     }
     setCapturedBlob(null);
     setPreviewUrl(null);
     setResult(null);
-
+    setShowSaveInput(false);
+    setNewKnownFaceName("");
     if (unknownInputRef.current) unknownInputRef.current.value = "";
-
-    startCamera();
-  }, [previewUrl, startCamera]);
+  }, [previewUrl]);
 
   useEffect(() => {
     return () => {
@@ -92,9 +108,15 @@ export default function MainPageContent({ isImageCachingEnabled }) {
     canvas.toBlob((blob) => {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       setCapturedBlob(blob);
+
+      // Set new previewUrl → triggers <img> to show, <video> to hide
       setPreviewUrl(URL.createObjectURL(blob));
+
+      setNewKnownFaceName(`new_face_${Date.now()}`); 
+      setShowSaveInput(true);
     }, "image/jpeg", 0.95);
   };
+
 
   const submitToBackend = async () => {
     if (!capturedBlob) return;
@@ -115,10 +137,9 @@ export default function MainPageContent({ isImageCachingEnabled }) {
       if (!res.ok) throw new Error(`Backend error: ${res.status}`);
       setResult(await res.json());
 
-      if (!isImageCachingEnabled) {        
+      if (!isImageCachingEnabled) {         
         setKnownFiles([]); 
         if (knownInputRef.current) knownInputRef.current.value = "";
-        stopCamera();
       }
 
     } catch (e) {
@@ -129,14 +150,52 @@ export default function MainPageContent({ isImageCachingEnabled }) {
     }
   };
 
+  const saveCapturedFace = () => {
+    if (!capturedBlob || !newKnownFaceName) return;
+    setLoading(true);
+    setError("");
+
+    try {
+      const filename = newKnownFaceName.endsWith(".jpg") 
+        ? newKnownFaceName 
+        : `${newKnownFaceName}.jpg`;
+
+      const savedFile = new File([capturedBlob], filename, { type: capturedBlob.type || 'image/jpeg' });
+
+      setKnownFiles(prev => [...prev, savedFile]);
+      startCamera();
+      
+      setCapturedBlob(null);
+      setPreviewUrl((prevUrl) => {
+        if (prevUrl) URL.revokeObjectURL(prevUrl);
+        return null;
+      });
+      setShowSaveInput(false);
+      setNewKnownFaceName("");
+    } catch (e) {
+      console.error(e);
+      setError(e.message || "Failed to save known face to session.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const onFilePick = (e) => {
     setError("");
     const file = e.target.files?.[0];
     if (!file) return;
     if (previewUrl) URL.revokeObjectURL(previewUrl);
+    
+    if (isStreaming) {
+      if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+      setIsStreaming(false);
+    }
 
     setPreviewUrl(URL.createObjectURL(file));
     setCapturedBlob(file);
+    setShowSaveInput(false);
+    setNewKnownFaceName("");
   };
 
   const onKnownPick = (e) => {
@@ -149,6 +208,8 @@ export default function MainPageContent({ isImageCachingEnabled }) {
     setKnownFiles([]);
   };
 
+  const isImageReady = capturedBlob && previewUrl;
+
   return (
     <div className="main-content">
       <button onClick={() => window.location.reload()} style={{ position: 'absolute', top: '1rem', right: '1rem', zIndex: 10 }} className="button button-danger">Reset App</button>
@@ -158,10 +219,46 @@ export default function MainPageContent({ isImageCachingEnabled }) {
       {error && <div className="error-message">{error}</div>}
 
       <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: '300px' }}>
-          <div className="video-container">
-            {!previewUrl && <video ref={videoRef} playsInline autoPlay muted />}
-            {previewUrl && <img src={previewUrl} alt="preview" />}
+        <div style={{ flex: 1 }}>
+          {/* <div className="video-container">
+            {!previewUrl ? (
+                <video ref={videoRef} playsInline autoPlay muted />
+            ) : (
+                <img src={previewUrl} />
+            )}
+            <canvas ref={canvasRef} className="hidden"></canvas>
+          </div> */}
+          {/* <div className="video-container">
+            <video
+              ref={videoRef}
+              playsInline
+              autoPlay
+              muted
+              style={{ display: previewUrl ? "none" : "block" }}
+            />
+            {previewUrl && (
+              <img
+                src={previewUrl}
+                style={{ display: "block" }}
+              />
+            )}
+          </div> */}
+          <div className="video-container" style={{ position: "relative" }}>
+            <video
+              ref={videoRef}
+              playsInline
+              autoPlay
+              muted
+              style={{ display: previewUrl ? "none" : "block", width: "100%" }}
+            />
+            <img
+              src={previewUrl || ""}
+              alt="Preview"
+              style={{
+                display: previewUrl ? "block" : "none",
+                width: "100%"
+              }}
+            />
             <canvas ref={canvasRef} className="hidden"></canvas>
           </div>
 
@@ -173,12 +270,52 @@ export default function MainPageContent({ isImageCachingEnabled }) {
                 <>
                   <button className="button button-secondary" onClick={flipCamera}>Flip Camera</button>
                   {!previewUrl && <button className="button button-primary" onClick={captureFrame}>Take Picture</button>}
-                  <button className="button button-secondary" onClick={stopCamera}>Reset</button>
+                  {previewUrl && (
+                    <button
+                      className="button button-secondary"
+                      onClick={() => {
+                        if (previewUrl) URL.revokeObjectURL(previewUrl);
+                        setCapturedBlob(null);
+                        setPreviewUrl(null);
+                        setShowSaveInput(false);
+                        setNewKnownFaceName("");
+                        startCamera();
+                      }}
+                    >
+                      Reset
+                    </button>
+                  )}                  
                   <button className="button button-secondary" onClick={onKnownReset}>Reset Known Faces</button>
                 </>
               )}
             </div>
           </div>
+          
+          {isImageReady && showSaveInput && (
+            <div className="card" style={{ marginTop: '.5rem' }}>
+              <h3 style={{ marginBottom: '0.5rem' }}>Add Captured Image to Known Faces</h3>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  value={newKnownFaceName}
+                  onChange={(e) => setNewKnownFaceName(e.target.value)}
+                  placeholder="Enter a name"
+                  style={{ flexGrow: 1, padding: '0.5rem', border: '1px solid #ccc', borderRadius: '4px' }}
+                />
+                <span style={{ whiteSpace: 'nowrap' }}>.jpg</span>
+                <button
+                  className="button button-success"
+                  onClick={saveCapturedFace}
+                  disabled={!newKnownFaceName || loading}
+                >
+                  Save to Session
+                </button>
+                <button className="button button-danger" onClick={() => setShowSaveInput(false)} disabled={loading}>
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="card">
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
@@ -255,10 +392,10 @@ export default function MainPageContent({ isImageCachingEnabled }) {
             )}
           </div>
           <div className="card">
-            <h2>Additional Known Faces</h2>
+            <h2>Additional Known Faces (Session)</h2>
             {knownFiles.length === 0 ? (
               <p style={{ fontSize: "0.875rem", color: "#6b7280" }}>
-                No additional known faces added.
+                No additional known faces added for this session.
               </p>
             ) : (
               <ul style={{ fontSize: "0.875rem", color: "#111", lineHeight: "1.5" }}>
