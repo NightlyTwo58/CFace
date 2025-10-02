@@ -38,5 +38,6 @@ build/
 checkpoints/
 frontend/node_modules
 backend/data/
+backend/static/
 
 !.gitkeep

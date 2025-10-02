@@ -7,11 +7,11 @@ This is a full-stack application that uses a FastAPI backend for face recognitio
 -    Real-time Camera Access: Images are captured directly from users' brower webcam. Users can alternatively upload a local image file.
 -    Face Recognition: The FastAPI backend, powered by the face_recognition and dlib libraries, processes the captured image to detect and recognize faces.
 -    Dynamic Database: The application supports dynamically adding and deleting "known" faces to its recognition database via API endpoints in a session.
--    Standalone Executable: The entire backend, including all Python dependencies and the React build, is bundled into a single .exe file without requiring a Python environment on the user's machine.
+-    Standalone Executable: The entire backend, including all Python dependencies and the React build, is bundled into a single .exe file.
 
-Recommended App Run
+Running the App
 -------------------
-Download the [executable](https://github.com/NightlyTwo58/P6_Face/releases/download/v1.0.1/main.exe) packaged in the latest [release](https://github.com/NightlyTwo58/P6_Face/releases/). It should be ready for use without any dependencies. If you're running the web version, it should start a terminal. Make sure to Ctrl+Click the IP address that pops up to open the app hosted locally. The local version shouldn't require anything else than starting the .exe. 
+Download the executable packaged in the latest [release](https://github.com/NightlyTwo58/P6_Face/releases/). It should be ready for use without any dependencies. If you're running the web version, it should start a terminal (this can be avoided with the usage of the included .vbs script). Make sure to Ctrl+Click the IP address that pops up to open the app hosted locally. The local version shouldn't require anything else than starting the .exe. 
 
 <table>
   <tr>
@@ -43,7 +43,7 @@ Frontend
 
    ```npm install```
 
-Developer App Run
+Dev App Run
 ---------------
 Put images of faces you wish to recognize in the backend/data/ folder.  
 
