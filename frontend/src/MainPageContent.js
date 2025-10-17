@@ -19,6 +19,7 @@ export default function MainPageContent({ isImageCachingEnabled }) {
   const [knownFiles, setKnownFiles] = useState([]);
   const [showSaveInput, setShowSaveInput] = useState(false);
   const [newKnownFaceName, setNewKnownFaceName] = useState("");
+  const [rotation, setRotation] = useState(0);
 
   const startCamera = useCallback(async (facingMode = useFrontCamera ? "user" : "environment") => {
     try {
@@ -103,19 +104,23 @@ export default function MainPageContent({ isImageCachingEnabled }) {
 
     canvas.width = width;
     canvas.height = height;
-    canvas.getContext("2d").drawImage(video, 0, 0, width, height);
+    const ctx = canvas.getContext("2d");
+
+    ctx.save();
+    ctx.translate(width / 2, height / 2);
+    ctx.rotate((rotation * Math.PI) / 180);
+    ctx.drawImage(video, -width / 2, -height / 2, width, height);
+    ctx.restore();
 
     canvas.toBlob((blob) => {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       setCapturedBlob(blob);
-
-      // Set new previewUrl → triggers <img> to show, <video> to hide
       setPreviewUrl(URL.createObjectURL(blob));
-
-      setNewKnownFaceName(`new_face_${Date.now()}`); 
+      setNewKnownFaceName(`new_face_${Date.now()}`);
       setShowSaveInput(true);
     }, "image/jpeg", 0.95);
   };
+
 
 
   const submitToBackend = async () => {
@@ -210,6 +215,20 @@ export default function MainPageContent({ isImageCachingEnabled }) {
 
   const isImageReady = capturedBlob && previewUrl;
 
+  const rotateCamera = () => {
+    setRotation((prev) => (prev + 90) % 360);
+
+    const video = videoRef.current;
+    if (video) {
+      video.style.transform = `rotate(${(rotation + 90) % 360}deg)`;
+    }
+
+    const canvas = canvasRef.current;
+    if (canvas) {
+      canvas.style.transform = `rotate(${(rotation + 90) % 360}deg)`;
+    }
+  };
+
   return (
     <div className="main-content">
       <button onClick={() => window.location.reload()} style={{ position: 'absolute', top: '1rem', right: '1rem', zIndex: 10 }} className="button button-danger">Reset App</button>
@@ -286,6 +305,7 @@ export default function MainPageContent({ isImageCachingEnabled }) {
                     </button>
                   )}                  
                   <button className="button button-secondary" onClick={onKnownReset}>Reset Known Faces</button>
+                  <button className="rotation" onClick={rotateCamera}>🛞</button>
                 </>
               )}
             </div>

@@ -1,0 +1,1 @@
+"C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x86\signtool.exe" sign /f "C:\Users\xuena\OneDrive\Desktop\MyTestCert.pfx" /p dabthestuff /fd SHA256 /td SHA256 /tr http://timestamp.digicert.com /d "CFace" "C:\Users\xuena\OneDrive\Documents\GitHub\P6_Face\backend\dist\Launcher.exe"

@@ -41,3 +41,4 @@ backend/data/
 backend/static/
 
 !.gitkeep
+/.idea
