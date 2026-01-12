@@ -389,20 +389,15 @@ export default function MainPageContent({ isImageCachingEnabled }) {
             {result && (
               <div style={{ fontSize: '0.875rem', color: '#111', lineHeight: '1.5' }}>
                 <p>
-                  <strong>Recognized:</strong> {result.result}
+                  <strong>Recognized:</strong> {result.result} ({(100 - result.distance * 100).toFixed(0)}%)
                 </p>
-                {result.distance !== undefined && (
-                  <p>
-                    <strong>Distance:</strong> {result.distance.toFixed(3)}
-                  </p>
-                )}
                 {result.distances && (
                   <div>
                     <strong>All Distances:</strong>
                     <ul style={{ marginLeft: '1rem' }}>
                       {Object.entries(result.distances).map(([name, dist]) => (
                         <li key={name}>
-                          {name}: {dist.toFixed(3)}
+                          {name} ({(100 - dist * 100).toFixed(0)}%)
                         </li>
                       ))}
                     </ul>

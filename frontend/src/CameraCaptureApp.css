@@ -102,14 +102,10 @@ h2 {
 .video-container {
   position: relative;
   width: 100%;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 16 / 9;
   overflow: hidden;
   background: #00000010;
   border: 1px solid #d1d5db;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  max-height: 300px;
   max-width: 1000px; 
 }
 
